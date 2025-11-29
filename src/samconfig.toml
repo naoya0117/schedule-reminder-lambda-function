@@ -1,0 +1,25 @@
+# More information about the configuration file can be found here:
+# https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-config.html
+version = 0.1
+
+[local]
+[local.global.parameters]
+stack_name = "schedule-reminder"
+
+[local.build.parameters]
+cached = false
+parallel = true
+
+[local.validate.parameters]
+lint = true
+
+[local.deploy.parameters]
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = true
+resolve_s3 = true
+
+[local.package.parameters]
+resolve_s3 = true
+
+[local.local_start_lambda.parameters]
+warm_containers = "EAGER"

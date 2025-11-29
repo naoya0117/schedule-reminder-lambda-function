@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  schedule-reminder
+
+  Notion-based schedule reminder service that sends notifications via Discord/LINE/Slack
+
+Parameters:
+  NotionAPIKey:
+    Type: String
+    Description: Notion Integration API Key
+    NoEcho: true
+
+  ReminderConfigDBID:
+    Type: String
+    Description: Notion Database ID for the reminder configuration master database
+
+Globals:
+  Function:
+    Timeout: 60
+    MemorySize: 256
+
+Resources:
+  ScheduleReminderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: app/
+      Handler: schedule-reminder
+      Runtime: go1.x
+      Architectures:
+        - x86_64
+      Events:
+        DailySchedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 0 * * ? *)  # Run daily at 00:00 UTC (09:00 JST)
+            Description: Daily reminder check
+            Enabled: true
+      Environment:
+        Variables:
+          NOTION_API_KEY: !Ref NotionAPIKey
+          REMINDER_CONFIG_DB_ID: !Ref ReminderConfigDBID
+
+Outputs:
+  ScheduleReminderFunction:
+    Description: "Schedule Reminder Lambda Function ARN"
+    Value: !GetAtt ScheduleReminderFunction.Arn
+
+  ScheduleReminderFunctionIamRole:
+    Description: "IAM Role for Schedule Reminder function"
+    Value: !GetAtt ScheduleReminderFunctionRole.Arn

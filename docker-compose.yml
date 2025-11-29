@@ -1,0 +1,71 @@
+# vim: set filetype=yaml.docker-compose :
+services:
+  # awsのシミュレータ(開発サーバ)
+  sam-server:
+    build:
+      context: './docker/sam-cli'
+      dockerfile: 'server.Dockerfile'
+      args:
+        - "UID=${UID:-1000}"
+        - "GID=${GID:-1000}"
+    depends_on:
+      dind:
+        condition: service_healthy
+      localstack:
+        condition: service_started
+    environment:
+      - 'DOCKER_HOST=unix:///var/local/run/docker/docker.sock'
+      # samの設定
+      - 'CONTAINER_HOST=dind'
+      - 'EXTRA_CONTAINER_SERVICE=localstack'
+      - 'DEBUG=${DEBUG:-0}'
+      - 'DEBUG_MODE=${DEBUG_MODE:-0}'
+    volumes:
+      - './src:/app'
+      - 'docker-socket-dir:/var/local/run/docker'
+  # ホットリロード
+  sam-builder:
+    build:
+      context: './docker/sam-cli'
+      dockerfile: 'builder.Dockerfile'
+      args:
+        - "UID=${UID:-1000}"
+        - "GID=${GID:-1000}"
+    volumes:
+      - './src:/app'
+  # awsシミュレータの実行環境
+  dind:
+    image: 'docker:28.2-dind'
+    ports:
+      - "${NODE_DEBUG_PORT:-9229}:9229"
+    privileged: true
+    environment:
+      - 'DOCKER_HOST=unix:///var/local/run/docker/docker.sock'
+    volumes:
+      - './src:/app'
+      - 'dind-data:/var/lib/docker'
+      - 'docker-socket-dir:/var/local/run/docker'
+    healthcheck:
+      test: [ "CMD", "docker", "version" ]
+      interval: 5s
+      timeout: 30s
+      retries: 5
+      start_period: 10s
+  # parameter-storeのシミュレータ
+  localstack:
+    image: localstack/localstack:4.5
+    environment:
+      - 'SERVICES=ssm'
+      - 'DEBUG=1'
+      - 'AWS_DEFAULT_REGION=us-east-1'
+      - 'LOCALSTACK_HOST=localstack'
+      - 'SSM_PARAM_PREFIX=/lambda-functions/schedule-reminder'
+      # PARAM_から始まる環境変数は整形して登録される(PARAM_HOGEHOGE->/lambda-functions/sample-project/param-hogehoge)
+      - 'PARAM_SECRET_KEY=${PARAM_SECRET_KEY}'
+    volumes:
+      - './localstack-init:/etc/localstack/init/ready.d'
+volumes:
+  dind-data:
+    driver: 'local'
+  docker-socket-dir:
+    driver: 'local'
