@@ -134,7 +134,25 @@ Notionベースのスケジュールリマインダーサービス。Discord、L
 子DB 2 ID: 1234567890abcdef1234567890abcdef
 ```
 
-### 3. AWSへデプロイ
+### 3. Parameter Storeに機密情報を設定
+
+アプリケーションはAWS Systems Manager Parameter Storeから機密情報を読み取ります。
+
+```bash
+# Notion APIキーを登録
+aws ssm put-parameter \
+  --name "/lambda-functions/schedule-reminder/param-notion-api-key" \
+  --value "secret_your_notion_api_key" \
+  --type "SecureString"
+
+# リマインダー設定マスターDBのIDを登録
+aws ssm put-parameter \
+  --name "/lambda-functions/schedule-reminder/param-reminder-config-db-id" \
+  --value "your_parent_database_id" \
+  --type "String"
+```
+
+### 4. AWSへデプロイ
 
 ```bash
 cd src
@@ -148,14 +166,32 @@ sam deploy --guided
 # 以下の項目を入力：
 # - Stack Name: schedule-reminder
 # - AWS Region: ap-northeast-1（または任意のリージョン）
-# - Parameter NotionAPIKey: secret_xxxxx（NotionのAPIキー）
-# - Parameter ReminderConfigDBID: xxxxx（親データベースのID）
 ```
 
-### 4. ローカルテスト（オプション）
+### 5. ローカルテスト（オプション）
+
+#### LocalStack (docker-compose) を使用
 
 ```bash
-# 環境変数を設定
+# .envファイルを作成（.env.exampleをコピー）
+cp src/.env.example src/.env
+
+# .envファイルを編集してNotionの情報を設定
+# PARAM_NOTION_API_KEY=secret_xxxxx
+# PARAM_REMINDER_CONFIG_DB_ID=xxxxx
+
+# Docker Composeで起動
+docker-compose up -d
+
+# LocalStackにParameter Storeの値が自動登録されます
+# PARAM_プレフィックスの環境変数は以下のように変換されます：
+# PARAM_NOTION_API_KEY → /lambda-functions/schedule-reminder/param-notion-api-key
+```
+
+#### SAM CLIでローカル実行（Parameter Store不要）
+
+```bash
+# 環境変数を設定（フォールバック用）
 export NOTION_API_KEY="secret_your_notion_api_key"
 export REMINDER_CONFIG_DB_ID="your_parent_database_id"
 

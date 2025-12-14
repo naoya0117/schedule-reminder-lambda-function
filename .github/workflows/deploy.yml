@@ -1,8 +1,10 @@
+name: Deploy Schedule Reminder
+
 on:
-  # サンプルプロジェクトのため，トリガーを無効化
-  #push:
-  #  branches:
-  #    - main
+  push:
+    branches:
+      - main
+      - master
   workflow_dispatch:
 
 jobs:
@@ -13,20 +15,21 @@ jobs:
       id-token: write
       contents: read
     env:
-      OIDC_ROLE: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/SampleProjectSamGitHubDeployRole
+      OIDC_ROLE: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/ScheduleReminderGitHubDeployRole
       SAM_CONFIG_ENV: prod
-      AWS_REGION: us-east-1
-      PARAM_PATH_PREFIX: /lambda-functions/sample-project
+      AWS_REGION: ap-northeast-1
+      PARAM_PATH_PREFIX: /lambda-functions/schedule-reminder
       SAM_CLI_TELEMETRY: 0
       
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
-          python-version: '3.9'
+          go-version: '1.21'
+          cache-dependency-path: src/app/go.sum
       
       - name: Setup SAM
         uses: aws-actions/setup-sam@v2
@@ -54,7 +57,7 @@ jobs:
       
       - name: Store parameters in Parameter Store
         run: |
-          for param in "param-secret-key:${{ secrets.PARAM_SECRET_KEY }}:SecureString"; do
+          for param in "param-notion-api-key:${{ secrets.PARAM_NOTION_API_KEY }}:SecureString" "param-reminder-config-db-id:${{ secrets.PARAM_REMINDER_CONFIG_DB_ID }}:String"; do
             IFS=':' read -r name value type <<< "$param"
             
             # まず更新を試行し、失敗したら新規作成（タグ付き）
@@ -69,6 +72,14 @@ jobs:
               --name "${{ env.PARAM_PATH_PREFIX }}/$name" \
               --value "$value" \
               --type "$type" \
-              --tags Key=Project,Value=sampleProject
+              --tags Key=Project,Value=schedule-reminder
           done
-              
+      
+      - name: Output deployment info
+        run: |
+          echo "Deployment completed successfully!"
+          aws cloudformation describe-stacks \
+            --stack-name schedule-reminder \
+            --region ${{ env.AWS_REGION }} \
+            --query 'Stacks[0].Outputs' \
+            --output table

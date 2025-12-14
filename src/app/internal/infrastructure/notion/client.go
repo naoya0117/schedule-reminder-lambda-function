@@ -32,26 +32,33 @@ func (c *Client) LoadReminderConfigs(ctx context.Context, masterDBID string) ([]
 		},
 	}
 
-	result, err := c.client.Database.Query(ctx, notionapi.DatabaseID(masterDBID), query)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query master database: %w", err)
-	}
-
 	var configs []*model.ReminderConfig
-	for _, page := range result.Results {
-		config, err := c.parseReminderConfig(page)
+	for {
+		result, err := c.client.Database.Query(ctx, notionapi.DatabaseID(masterDBID), query)
 		if err != nil {
-			// Log error but continue processing other configs
-			fmt.Printf("Warning: failed to parse config %s: %v\n", page.ID, err)
-			continue
+			return nil, fmt.Errorf("failed to query master database: %w", err)
 		}
 
-		if err := config.Validate(); err != nil {
-			fmt.Printf("Warning: invalid config %s: %v\n", page.ID, err)
-			continue
+		for _, page := range result.Results {
+			config, err := c.parseReminderConfig(page)
+			if err != nil {
+				// Log error but continue processing other configs
+				fmt.Printf("Warning: failed to parse config %s: %v\n", page.ID, err)
+				continue
+			}
+
+			if err := config.Validate(); err != nil {
+				fmt.Printf("Warning: invalid config %s: %v\n", page.ID, err)
+				continue
+			}
+
+			configs = append(configs, config)
 		}
 
-		configs = append(configs, config)
+		if !result.HasMore || result.NextCursor == "" {
+			break
+		}
+		query.StartCursor = result.NextCursor
 	}
 
 	return configs, nil
@@ -81,7 +88,7 @@ func (c *Client) parseReminderConfig(page notionapi.Page) (*model.ReminderConfig
 	}
 
 	// Notification Channel (Select)
-	if selectProp, ok := page.Properties["Notification Channel"].(*notionapi.SelectProperty); ok && selectProp.Select != nil {
+	if selectProp, ok := page.Properties["Notification Channel"].(*notionapi.SelectProperty); ok && selectProp.Select.Name != "" {
 		config.NotificationChannel = selectProp.Select.Name
 	}
 
@@ -114,7 +121,7 @@ func (c *Client) parseReminderConfig(page notionapi.Page) (*model.ReminderConfig
 
 	// Timezone
 	timezone := "Asia/Tokyo" // Default
-	if selectProp, ok := page.Properties["Timezone"].(*notionapi.SelectProperty); ok && selectProp.Select != nil {
+	if selectProp, ok := page.Properties["Timezone"].(*notionapi.SelectProperty); ok && selectProp.Select.Name != "" {
 		timezone = selectProp.Select.Name
 	}
 	loc, err := time.LoadLocation(timezone)

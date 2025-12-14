@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/aws/aws-lambda-go/lambda"
 
 	"schedule-reminder/internal/domain/service"
+	awsinfra "schedule-reminder/internal/infrastructure/aws"
 	"schedule-reminder/internal/infrastructure/notion"
 )
 
@@ -15,15 +15,21 @@ import (
 func handler(ctx context.Context) error {
 	fmt.Println("=== Schedule Reminder Lambda Started ===")
 
-	// Get configuration from environment variables
-	notionAPIKey := os.Getenv("NOTION_API_KEY")
-	if notionAPIKey == "" {
-		return fmt.Errorf("NOTION_API_KEY environment variable is required")
+	// Create SSM client to retrieve parameters from Parameter Store
+	ssmClient, err := awsinfra.NewSSMClient(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to create SSM client: %w", err)
 	}
 
-	masterDBID := os.Getenv("REMINDER_CONFIG_DB_ID")
-	if masterDBID == "" {
-		return fmt.Errorf("REMINDER_CONFIG_DB_ID environment variable is required")
+	// Get configuration from Parameter Store
+	notionAPIKey, err := ssmClient.GetParameterWithFallback(ctx, "NOTION_API_KEY")
+	if err != nil {
+		return fmt.Errorf("failed to get NOTION_API_KEY: %w", err)
+	}
+
+	masterDBID, err := ssmClient.GetParameterWithFallback(ctx, "REMINDER_CONFIG_DB_ID")
+	if err != nil {
+		return fmt.Errorf("failed to get REMINDER_CONFIG_DB_ID: %w", err)
 	}
 
 	// Create Notion client

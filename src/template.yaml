@@ -5,16 +5,6 @@ Description: >
 
   Notion-based schedule reminder service that sends notifications via Discord/LINE/Slack
 
-Parameters:
-  NotionAPIKey:
-    Type: String
-    Description: Notion Integration API Key
-    NoEcho: true
-
-  ReminderConfigDBID:
-    Type: String
-    Description: Notion Database ID for the reminder configuration master database
-
 Globals:
   Function:
     Timeout: 60
@@ -36,10 +26,15 @@ Resources:
             Schedule: cron(0 0 * * ? *)  # Run daily at 00:00 UTC (09:00 JST)
             Description: Daily reminder check
             Enabled: true
-      Environment:
-        Variables:
-          NOTION_API_KEY: !Ref NotionAPIKey
-          REMINDER_CONFIG_DB_ID: !Ref ReminderConfigDBID
+      Policies:
+        - Statement:
+          - Sid: SSMParameterAccess
+            Effect: Allow
+            Action:
+              - ssm:GetParameter
+              - ssm:GetParameters
+            Resource:
+              - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/lambda-functions/schedule-reminder/*'
 
 Outputs:
   ScheduleReminderFunction:

@@ -12,11 +12,12 @@ import (
 // FetchSchedules fetches schedules from a child database
 func (c *Client) FetchSchedules(ctx context.Context, config *model.ReminderConfig, today time.Time) ([]*model.Schedule, error) {
 	// Query only future schedules (optimization)
+	start := notionapi.Date(today)
 	query := &notionapi.DatabaseQueryRequest{
 		Filter: &notionapi.PropertyFilter{
 			Property: config.DatePropertyName,
 			Date: &notionapi.DateFilterCondition{
-				OnOrAfter: notionapi.Date(today),
+				OnOrAfter: &start,
 			},
 		},
 		Sorts: []notionapi.SortObject{
@@ -27,25 +28,32 @@ func (c *Client) FetchSchedules(ctx context.Context, config *model.ReminderConfi
 		},
 	}
 
-	result, err := c.client.Database.Query(ctx, notionapi.DatabaseID(config.TargetDatabaseID), query)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query database %s: %w", config.TargetDatabaseID, err)
-	}
-
 	var schedules []*model.Schedule
-	for _, page := range result.Results {
-		schedule, err := c.parseSchedule(page, config)
+	for {
+		result, err := c.client.Database.Query(ctx, notionapi.DatabaseID(config.TargetDatabaseID), query)
 		if err != nil {
-			fmt.Printf("Warning: failed to parse schedule %s: %v\n", page.ID, err)
-			continue
+			return nil, fmt.Errorf("failed to query database %s: %w", config.TargetDatabaseID, err)
 		}
 
-		if err := schedule.Validate(); err != nil {
-			fmt.Printf("Warning: invalid schedule %s: %v\n", page.ID, err)
-			continue
+		for _, page := range result.Results {
+			schedule, err := c.parseSchedule(page, config)
+			if err != nil {
+				fmt.Printf("Warning: failed to parse schedule %s: %v\n", page.ID, err)
+				continue
+			}
+
+			if err := schedule.Validate(); err != nil {
+				fmt.Printf("Warning: invalid schedule %s: %v\n", page.ID, err)
+				continue
+			}
+
+			schedules = append(schedules, schedule)
 		}
 
-		schedules = append(schedules, schedule)
+		if !result.HasMore || result.NextCursor == "" {
+			break
+		}
+		query.StartCursor = result.NextCursor
 	}
 
 	return schedules, nil
@@ -71,7 +79,7 @@ func (c *Client) parseSchedule(page notionapi.Page, config *model.ReminderConfig
 	dateProp := page.Properties[config.DatePropertyName]
 	if dateProp != nil {
 		if dp, ok := dateProp.(*notionapi.DateProperty); ok && dp.Date != nil && dp.Date.Start != nil {
-			schedule.DueDate = dp.Date.Start.Time
+			schedule.DueDate = time.Time(*dp.Date.Start)
 		}
 	}
 
@@ -102,7 +110,7 @@ func extractPropertyValue(prop notionapi.Property) interface{} {
 	case *notionapi.NumberProperty:
 		return p.Number
 	case *notionapi.SelectProperty:
-		if p.Select != nil {
+		if p.Select.Name != "" {
 			return p.Select.Name
 		}
 	case *notionapi.MultiSelectProperty:
@@ -113,7 +121,7 @@ func extractPropertyValue(prop notionapi.Property) interface{} {
 		return values
 	case *notionapi.DateProperty:
 		if p.Date != nil && p.Date.Start != nil {
-			return p.Date.Start.Time.Format("2006-01-02")
+			return time.Time(*p.Date.Start).Format("2006-01-02")
 		}
 	case *notionapi.PeopleProperty:
 		var names []string
