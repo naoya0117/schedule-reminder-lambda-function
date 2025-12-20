@@ -17,7 +17,7 @@ func CreateNotifier(config *model.ReminderConfig) (Notifier, error) {
 		}
 		return NewDiscordNotifier(config.WebhookURL), nil
 
-	// TODO: Implement Slack notifier
+	// TODO: Implement additional Slack features (attachments, blocks)
 	case "line":
 		if config.ChannelToken == "" {
 			return nil, fmt.Errorf("channel access token required for LINE")
@@ -27,7 +27,10 @@ func CreateNotifier(config *model.ReminderConfig) (Notifier, error) {
 		}
 		return NewLineNotifier(config.ChannelToken), nil
 	case "slack":
-		return nil, fmt.Errorf("Slack notifier not yet implemented")
+		if config.WebhookURL == "" {
+			return nil, fmt.Errorf("webhook URL required for Slack")
+		}
+		return NewSlackNotifier(config.WebhookURL), nil
 
 	default:
 		return nil, fmt.Errorf("unsupported notification channel: %s", config.NotificationChannel)

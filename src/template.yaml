@@ -15,7 +15,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: app/
-      Handler: schedule-reminder
+      Handler: main
       Runtime: go1.x
       Architectures:
         - x86_64

@@ -16,7 +16,7 @@ Notionベースのスケジュールリマインダーサービス。Discord、L
 - **言語**: Go 1.21
 - **フレームワーク**: AWS SAM (Serverless Application Model)
 - **データソース**: Notion API
-- **通知チャネル**: Discord、LINE（Slackは近日対応予定）
+- **通知チャネル**: Discord、LINE、Slack
 
 ## 必要な準備
 
@@ -37,7 +37,7 @@ Notionベースのスケジュールリマインダーサービス。Discord、L
 
 - ✅ **柔軟なリマインドタイミング**: スケジュールごとに複数のリマインド時期を設定可能（1日前、4営業日前など）
 - ✅ **営業日計算**: 営業日ベースのリマインドは自動的に週末・祝日をスキップ
-- ✅ **複数の通知チャネル**: Discord、LINE対応（Slackは近日対応）
+- ✅ **複数の通知チャネル**: Discord、LINE、Slack対応
 - ✅ **カスタマイズ可能なメッセージテンプレート**: 変数を使って通知メッセージをカスタマイズ
 - ✅ **複数データベース対応**: 異なる設定で複数のNotionデータベースを監視
 - ✅ **タイムゾーン対応**: Asia/Tokyo固定
@@ -658,7 +658,7 @@ aws logs tail /aws/lambda/schedule-reminder-ScheduleReminderFunction-xxx --follo
 ### Phase 2（次期）
 
 - [x] LINE通知対応
-- [ ] Slack通知対応
+- [x] Slack通知対応
 - [ ] 祝日API連携（自動祝日読み込み）
 - [ ] 通知履歴管理（重複防止）
 - [ ] 失敗時のリトライロジック
