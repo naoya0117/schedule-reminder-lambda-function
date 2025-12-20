@@ -26,7 +26,7 @@ warm_containers = "EAGER"
 
 [prod]
 [prod.global.parameters]
-stack_name = "schedule-reminder"
+stack_name = "schedule-reminder-deploy-stack"
 
 [prod.build.parameters]
 cached = false
@@ -37,7 +37,7 @@ lint = true
 
 [prod.deploy.parameters]
 capabilities = "CAPABILITY_IAM"
-confirm_changeset = true
+confirm_changeset = false
 resolve_s3 = true
 
 [prod.package.parameters]
