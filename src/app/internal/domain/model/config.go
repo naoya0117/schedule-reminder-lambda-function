@@ -29,13 +29,13 @@ func (c *ReminderConfig) Validate() error {
 		return &ValidationError{Field: "NotificationChannel", Message: "required"}
 	}
 	if c.DatePropertyName == "" {
-		c.DatePropertyName = "Due Date" // Default
+		c.DatePropertyName = "期限日" // Fixed
 	}
 	if c.TitlePropertyName == "" {
-		c.TitlePropertyName = "Title" // Default
+		c.TitlePropertyName = "タイトル" // Fixed
 	}
 	if c.Timezone == nil {
-		c.Timezone = time.FixedZone("JST", 9*3600) // Default to JST
+		c.Timezone = time.FixedZone("JST", 9*3600) // Fixed to JST
 	}
 	return nil
 }

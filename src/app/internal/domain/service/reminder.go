@@ -103,7 +103,12 @@ func (s *ReminderService) processConfig(ctx context.Context, config *model.Remin
 func (s *ReminderService) evaluateTimings(schedule *model.Schedule, config *model.ReminderConfig, today time.Time, calc *calculator.BusinessDayCalculator) []string {
 	var triggered []string
 
-	for _, timing := range config.ReminderTimings {
+	timings := config.ReminderTimings
+	if len(schedule.ReminderTimings) > 0 {
+		timings = schedule.ReminderTimings
+	}
+
+	for _, timing := range timings {
 		reminderDate, err := calculator.ParseAndCalculateReminderDate(schedule.DueDate, timing, calc)
 		if err != nil {
 			fmt.Printf("      Warning: failed to calculate reminder date for '%s': %v\n", timing, err)

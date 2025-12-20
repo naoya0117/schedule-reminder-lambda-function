@@ -71,64 +71,90 @@ func (c *Client) parseReminderConfig(page notionapi.Page) (*model.ReminderConfig
 	}
 
 	// Name (Title)
-	if titleProp, ok := page.Properties["Name"].(*notionapi.TitleProperty); ok && len(titleProp.Title) > 0 {
+	if titleProp := getTitleProperty(page, "名前", "Name"); titleProp != nil && len(titleProp.Title) > 0 {
 		config.Name = titleProp.Title[0].PlainText
 	}
 
 	// Target Database ID
-	if textProp, ok := page.Properties["Target Database ID"].(*notionapi.RichTextProperty); ok && len(textProp.RichText) > 0 {
+	if textProp := getRichTextProperty(page, "対象データベースID", "Target Database ID"); textProp != nil && len(textProp.RichText) > 0 {
 		config.TargetDatabaseID = textProp.RichText[0].PlainText
 	}
 
 	// Reminder Timings (Multi-select)
-	if multiSelectProp, ok := page.Properties["Reminder Timings"].(*notionapi.MultiSelectProperty); ok {
+	if multiSelectProp := getMultiSelectProperty(page, "リマインドタイミング", "Reminder Timings"); multiSelectProp != nil {
 		for _, option := range multiSelectProp.MultiSelect {
 			config.ReminderTimings = append(config.ReminderTimings, option.Name)
 		}
 	}
 
 	// Notification Channel (Select)
-	if selectProp, ok := page.Properties["Notification Channel"].(*notionapi.SelectProperty); ok && selectProp.Select.Name != "" {
+	if selectProp := getSelectProperty(page, "通知チャネル", "Notification Channel"); selectProp != nil && selectProp.Select.Name != "" {
 		config.NotificationChannel = selectProp.Select.Name
 	}
 
 	// Webhook URL
-	if urlProp, ok := page.Properties["Webhook URL"].(*notionapi.URLProperty); ok {
+	if urlProp := getURLProperty(page, "Webhook URL"); urlProp != nil {
 		config.WebhookURL = string(urlProp.URL)
 	}
 
 	// Channel Token
-	if textProp, ok := page.Properties["Channel Access Token"].(*notionapi.RichTextProperty); ok && len(textProp.RichText) > 0 {
+	if textProp := getRichTextProperty(page, "チャネルアクセストークン", "Channel Access Token"); textProp != nil && len(textProp.RichText) > 0 {
 		config.ChannelToken = textProp.RichText[0].PlainText
 	}
 
 	// Message Template
-	if textProp, ok := page.Properties["Message Template"].(*notionapi.RichTextProperty); ok && len(textProp.RichText) > 0 {
+	if textProp := getRichTextProperty(page, "メッセージテンプレート", "Message Template"); textProp != nil && len(textProp.RichText) > 0 {
 		config.MessageTemplate = textProp.RichText[0].PlainText
 	}
 
 	// Date Property Name
-	config.DatePropertyName = "Due Date" // Default
-	if textProp, ok := page.Properties["Date Property Name"].(*notionapi.RichTextProperty); ok && len(textProp.RichText) > 0 {
-		config.DatePropertyName = textProp.RichText[0].PlainText
-	}
+	config.DatePropertyName = "期限日" // Fixed
 
 	// Title Property Name
-	config.TitlePropertyName = "Title" // Default
-	if textProp, ok := page.Properties["Title Property Name"].(*notionapi.RichTextProperty); ok && len(textProp.RichText) > 0 {
-		config.TitlePropertyName = textProp.RichText[0].PlainText
-	}
+	config.TitlePropertyName = "タイトル" // Fixed
 
 	// Timezone
-	timezone := "Asia/Tokyo" // Default
-	if selectProp, ok := page.Properties["Timezone"].(*notionapi.SelectProperty); ok && selectProp.Select.Name != "" {
-		timezone = selectProp.Select.Name
-	}
-	loc, err := time.LoadLocation(timezone)
+	loc, err := time.LoadLocation("Asia/Tokyo")
 	if err != nil {
 		loc = time.FixedZone("JST", 9*3600) // Fallback to JST
 	}
 	config.Timezone = loc
 
 	return config, nil
+}
+
+func getTitleProperty(page notionapi.Page, names ...string) *notionapi.TitleProperty {
+	for _, name := range names {
+		if prop, ok := page.Properties[name].(*notionapi.TitleProperty); ok {
+			return prop
+		}
+	}
+	return nil
+}
+
+func getRichTextProperty(page notionapi.Page, names ...string) *notionapi.RichTextProperty {
+	for _, name := range names {
+		if prop, ok := page.Properties[name].(*notionapi.RichTextProperty); ok {
+			return prop
+		}
+	}
+	return nil
+}
+
+func getMultiSelectProperty(page notionapi.Page, names ...string) *notionapi.MultiSelectProperty {
+	for _, name := range names {
+		if prop, ok := page.Properties[name].(*notionapi.MultiSelectProperty); ok {
+			return prop
+		}
+	}
+	return nil
+}
+
+func getURLProperty(page notionapi.Page, names ...string) *notionapi.URLProperty {
+	for _, name := range names {
+		if prop, ok := page.Properties[name].(*notionapi.URLProperty); ok {
+			return prop
+		}
+	}
+	return nil
 }

@@ -24,9 +24,9 @@ services:
       - 'AWS_REGION=${AWS_REGION:-us-east-1}'
       - 'AWS_ENDPOINT_URL=${AWS_ENDPOINT_URL:-http://localstack:4566}'
       - 'SSM_PARAM_PREFIX=${SSM_PARAM_PREFIX:-/lambda-functions/schedule-reminder}'
-      # フォールバック用環境変数（Parameter Storeが利用できない場合）
-      - 'NOTION_API_KEY=${NOTION_API_KEY:-}'
-      - 'REMINDER_CONFIG_DB_ID=${REMINDER_CONFIG_DB_ID:-}'
+      # INITスクリプト用
+      - 'NOTION_API_KEY=${NOTION_API_KEY}'
+      - 'REMINDER_CONFIG_DB_ID=${REMINDER_CONFIG_DB_ID}'
     volumes:
       - './src:/app'
       - 'docker-socket-dir:/var/local/run/docker'
@@ -68,8 +68,8 @@ services:
       - 'LOCALSTACK_HOST=localstack'
       - 'SSM_PARAM_PREFIX=/lambda-functions/schedule-reminder'
       # PARAM_から始まる環境変数は整形して登録される(PARAM_HOGEHOGE->/lambda-functions/schedule-reminder/param-hogehoge)
-      - 'PARAM_NOTION_API_KEY=${PARAM_NOTION_API_KEY:-}'
-      - 'PARAM_REMINDER_CONFIG_DB_ID=${PARAM_REMINDER_CONFIG_DB_ID:-}'
+      - 'PARAM_NOTION_API_KEY=${NOTION_API_KEY:-}'
+      - 'PARAM_REMINDER_CONFIG_DB_ID=${REMINDER_CONFIG_DB_ID:-}'
     volumes:
       - './localstack-init:/etc/localstack/init/ready.d'
 volumes:

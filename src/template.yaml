@@ -23,7 +23,7 @@ Resources:
         DailySchedule:
           Type: Schedule
           Properties:
-            Schedule: cron(0 0 * * ? *)  # Run daily at 00:00 UTC (09:00 JST)
+            Schedule: cron(0 9 * * ? *)  # Run daily at 00:00 UTC (09:00 JST)
             Description: Daily reminder check
             Enabled: true
       Policies:

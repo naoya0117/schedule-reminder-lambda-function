@@ -10,6 +10,9 @@ import (
 // BuildMessage builds a notification message from template
 func BuildMessage(schedule *model.Schedule, config *model.ReminderConfig, timing string) string {
 	template := config.MessageTemplate
+	if schedule.MessageTemplate != "" {
+		template = schedule.MessageTemplate
+	}
 	if template == "" {
 		// Default template
 		template = "【リマインド】{title}\n期限: {due_date} ({days_text})\n{url}"

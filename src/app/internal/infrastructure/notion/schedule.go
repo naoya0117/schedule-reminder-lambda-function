@@ -84,8 +84,18 @@ func (c *Client) parseSchedule(page notionapi.Page, config *model.ReminderConfig
 	}
 
 	// Extract description (optional)
-	if descProp, ok := page.Properties["Description"].(*notionapi.RichTextProperty); ok && len(descProp.RichText) > 0 {
+	if descProp := getScheduleRichTextProperty(page, "説明", "Description"); descProp != nil && len(descProp.RichText) > 0 {
 		schedule.Description = descProp.RichText[0].PlainText
+	}
+	// Extract message template (optional)
+	if textProp := getScheduleRichTextProperty(page, "メッセージテンプレート", "Message Template"); textProp != nil && len(textProp.RichText) > 0 {
+		schedule.MessageTemplate = textProp.RichText[0].PlainText
+	}
+	// Extract reminder timings (optional)
+	if multiSelectProp := getScheduleMultiSelectProperty(page, "リマインドタイミング", "Reminder Timings"); multiSelectProp != nil {
+		for _, option := range multiSelectProp.MultiSelect {
+			schedule.ReminderTimings = append(schedule.ReminderTimings, option.Name)
+		}
 	}
 
 	// Store all properties for template rendering
@@ -94,6 +104,24 @@ func (c *Client) parseSchedule(page notionapi.Page, config *model.ReminderConfig
 	}
 
 	return schedule, nil
+}
+
+func getScheduleRichTextProperty(page notionapi.Page, names ...string) *notionapi.RichTextProperty {
+	for _, name := range names {
+		if prop, ok := page.Properties[name].(*notionapi.RichTextProperty); ok {
+			return prop
+		}
+	}
+	return nil
+}
+
+func getScheduleMultiSelectProperty(page notionapi.Page, names ...string) *notionapi.MultiSelectProperty {
+	for _, name := range names {
+		if prop, ok := page.Properties[name].(*notionapi.MultiSelectProperty); ok {
+			return prop
+		}
+	}
+	return nil
 }
 
 // extractPropertyValue extracts the value from a Notion property
