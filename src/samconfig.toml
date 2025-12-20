@@ -23,3 +23,25 @@ resolve_s3 = true
 
 [local.local_start_lambda.parameters]
 warm_containers = "EAGER"
+
+[prod]
+[prod.global.parameters]
+stack_name = "schedule-reminder"
+
+[prod.build.parameters]
+cached = false
+parallel = true
+
+[prod.validate.parameters]
+lint = true
+
+[prod.deploy.parameters]
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = true
+resolve_s3 = true
+
+[prod.package.parameters]
+resolve_s3 = true
+
+[prod.local_start_lambda.parameters]
+warm_containers = "EAGER"
