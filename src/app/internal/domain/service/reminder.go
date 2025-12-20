@@ -14,6 +14,11 @@ import (
 	"time"
 )
 
+const (
+	sendMaxAttempts = 3
+	sendBaseDelay   = 500 * time.Millisecond
+)
+
 // NotionClient interface for Notion operations
 type NotionClient interface {
 	LoadReminderConfigs(ctx context.Context, masterDBID string) ([]*model.ReminderConfig, error)
@@ -154,12 +159,45 @@ func (s *ReminderService) sendNotification(ctx context.Context, schedule *model.
 	}
 
 	// Send notification
-	if err := n.Send(ctx, notification); err != nil {
+	if err := sendWithRetry(ctx, n, notification); err != nil {
 		return fmt.Errorf("failed to send notification: %w", err)
 	}
 
 	fmt.Printf("      ✓ Sent %s notification\n", n.Type())
 	return nil
+}
+
+func sendWithRetry(ctx context.Context, n notifier.Notifier, notification *model.Notification) error {
+	var lastErr error
+	for attempt := 1; attempt <= sendMaxAttempts; attempt++ {
+		if err := n.Send(ctx, notification); err != nil {
+			lastErr = err
+			if attempt == sendMaxAttempts {
+				break
+			}
+			delay := time.Duration(attempt) * sendBaseDelay
+			fmt.Printf("      Warning: send failed (%s), retrying in %s (attempt %d/%d)\n",
+				err, delay, attempt+1, sendMaxAttempts)
+			if !sleepWithContext(ctx, delay) {
+				return fmt.Errorf("retry canceled: %w", ctx.Err())
+			}
+			continue
+		}
+		return nil
+	}
+	return lastErr
+}
+
+func sleepWithContext(ctx context.Context, delay time.Duration) bool {
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+
+	select {
+	case <-ctx.Done():
+		return false
+	case <-timer.C:
+		return true
+	}
 }
 
 // loadHolidays loads holiday data from an external API.
