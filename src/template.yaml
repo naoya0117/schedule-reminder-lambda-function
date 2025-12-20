@@ -16,7 +16,7 @@ Resources:
     Properties:
       CodeUri: app/
       Handler: .
-      Runtime: go1.x
+      Runtime: provided.al2023
       Architectures:
         - x86_64
       Events:
