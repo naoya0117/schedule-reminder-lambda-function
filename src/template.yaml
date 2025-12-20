@@ -15,8 +15,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: app/
-      Handler: bootstrap
-      Runtime: provided.al2023
+      Handler: main
+      Runtime: go1.x
       Architectures:
         - x86_64
       Events:
