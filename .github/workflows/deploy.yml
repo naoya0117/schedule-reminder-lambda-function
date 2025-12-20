@@ -73,12 +73,3 @@ jobs:
               --type "$type" \
               --tags Key=Project,Value=schedule-reminder
           done
-      
-      - name: Output deployment info
-        run: |
-          echo "Deployment completed successfully!"
-          aws cloudformation describe-stacks \
-            --stack-name schedule-reminder \
-            --region ${{ env.AWS_REGION }} \
-            --query 'Stacks[0].Outputs' \
-            --output table
