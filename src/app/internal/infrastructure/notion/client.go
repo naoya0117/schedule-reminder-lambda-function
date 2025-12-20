@@ -102,6 +102,11 @@ func (c *Client) parseReminderConfig(page notionapi.Page) (*model.ReminderConfig
 		config.ChannelToken = textProp.RichText[0].PlainText
 	}
 
+	// LINE Recipient ID
+	if textProp := getRichTextProperty(page, "LINE送信先ID", "Line Recipient ID", "LINE Recipient ID"); textProp != nil && len(textProp.RichText) > 0 {
+		config.LineRecipientID = textProp.RichText[0].PlainText
+	}
+
 	// Message Template
 	if textProp := getRichTextProperty(page, "メッセージテンプレート", "Message Template"); textProp != nil && len(textProp.RichText) > 0 {
 		config.MessageTemplate = textProp.RichText[0].PlainText

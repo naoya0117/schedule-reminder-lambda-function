@@ -17,9 +17,15 @@ func CreateNotifier(config *model.ReminderConfig) (Notifier, error) {
 		}
 		return NewDiscordNotifier(config.WebhookURL), nil
 
-	// TODO: Implement LINE and Slack notifiers
+	// TODO: Implement Slack notifier
 	case "line":
-		return nil, fmt.Errorf("LINE notifier not yet implemented")
+		if config.ChannelToken == "" {
+			return nil, fmt.Errorf("channel access token required for LINE")
+		}
+		if config.LineRecipientID == "" {
+			return nil, fmt.Errorf("line recipient ID required for LINE")
+		}
+		return NewLineNotifier(config.ChannelToken), nil
 	case "slack":
 		return nil, fmt.Errorf("Slack notifier not yet implemented")
 

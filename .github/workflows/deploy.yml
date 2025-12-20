@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - master
   workflow_dispatch:
 
 jobs:
@@ -15,9 +14,9 @@ jobs:
       id-token: write
       contents: read
     env:
-      OIDC_ROLE: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/ScheduleReminderGitHubDeployRole
+      OIDC_ROLE: ${{ secrets.AWS_OIDC_ROLE_ARN }}
       SAM_CONFIG_ENV: prod
-      AWS_REGION: ap-northeast-1
+      AWS_REGION: us-east-1
       PARAM_PATH_PREFIX: /lambda-functions/schedule-reminder
       SAM_CLI_TELEMETRY: 0
       

@@ -11,6 +11,7 @@ type ReminderConfig struct {
 	NotificationChannel string
 	WebhookURL          string
 	ChannelToken        string
+	LineRecipientID     string
 	MessageTemplate     string
 	DatePropertyName    string
 	TitlePropertyName   string

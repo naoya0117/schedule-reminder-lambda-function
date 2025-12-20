@@ -6,6 +6,7 @@ import (
 	"schedule-reminder/internal/domain/calculator"
 	"schedule-reminder/internal/domain/model"
 	"schedule-reminder/internal/infrastructure/notifier"
+	"strings"
 	"time"
 )
 
@@ -128,13 +129,18 @@ func (s *ReminderService) sendNotification(ctx context.Context, schedule *model.
 	// Build message from template
 	message := BuildMessage(schedule, config, timing)
 
+	destination := config.WebhookURL
+	if strings.ToLower(config.NotificationChannel) == "line" {
+		destination = config.LineRecipientID
+	}
+
 	// Create notification
 	notification := &model.Notification{
 		Schedule:    schedule,
 		Config:      config,
 		Timing:      timing,
 		Message:     message,
-		Destination: config.WebhookURL,
+		Destination: destination,
 	}
 
 	// Create notifier

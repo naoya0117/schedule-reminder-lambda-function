@@ -25,6 +25,7 @@ type options struct {
 	sampleNotification    string
 	sampleWebhookURL      string
 	sampleChannelToken    string
+	sampleLineRecipientID string
 }
 
 func main() {
@@ -82,6 +83,7 @@ func parseFlags() options {
 	flag.StringVar(&opts.sampleNotification, "sample-notification-channel", "Discord", "Sample notification channel")
 	flag.StringVar(&opts.sampleWebhookURL, "sample-webhook-url", "", "Sample webhook URL (required when creating sample config)")
 	flag.StringVar(&opts.sampleChannelToken, "sample-channel-token", "", "Sample channel access token")
+	flag.StringVar(&opts.sampleLineRecipientID, "sample-line-recipient-id", "", "Sample LINE recipient ID")
 
 	reminderTimingOptions := flag.String("reminder-timing-options", "当日,1日前,2日前,3日前,1営業日前,2営業日前,3営業日前,4営業日前,5営業日前,1週間前,2週間前", "Comma-separated reminder timing options")
 	notificationChannels := flag.String("notification-channels", "Discord,LINE,Slack", "Comma-separated notification channels")
@@ -116,8 +118,24 @@ func validateOptions(opts options) error {
 	if len(opts.notificationChannels) == 0 {
 		return fmt.Errorf("notification-channels must not be empty")
 	}
-	if opts.createSampleConfig && opts.sampleWebhookURL == "" {
-		return fmt.Errorf("sample-webhook-url is required when create-sample-config is set")
+	if opts.createSampleConfig {
+		switch strings.ToLower(opts.sampleNotification) {
+		case "line":
+			if opts.sampleLineRecipientID == "" {
+				return fmt.Errorf("sample-line-recipient-id is required for LINE sample config")
+			}
+			if opts.sampleChannelToken == "" {
+				return fmt.Errorf("sample-channel-token is required for LINE sample config")
+			}
+		case "discord", "slack":
+			if opts.sampleWebhookURL == "" {
+				return fmt.Errorf("sample-webhook-url is required for %s sample config", opts.sampleNotification)
+			}
+		default:
+			if opts.sampleWebhookURL == "" {
+				return fmt.Errorf("sample-webhook-url is required when create-sample-config is set")
+			}
+		}
 	}
 	if opts.createSampleConfig && opts.skipScheduleDB {
 		return fmt.Errorf("create-sample-config requires schedule database creation")
@@ -174,16 +192,19 @@ func masterDatabaseProperties(opts options) notionapi.PropertyConfigs {
 			Type:        notionapi.PropertyConfigTypeMultiSelect,
 			MultiSelect: notionapi.Select{Options: toOptions(opts.reminderTimingOptions)},
 		},
-		"通知チャネル": &notionapi.SelectPropertyConfig{
-			Type:   notionapi.PropertyConfigTypeSelect,
-			Select: notionapi.Select{Options: toOptions(opts.notificationChannels)},
-		},
-		"Webhook URL": &notionapi.URLPropertyConfig{
-			Type: notionapi.PropertyConfigTypeURL,
-		},
-		"チャネルアクセストークン": &notionapi.RichTextPropertyConfig{
-			Type: notionapi.PropertyConfigTypeRichText,
-		},
+	"通知チャネル": &notionapi.SelectPropertyConfig{
+		Type:   notionapi.PropertyConfigTypeSelect,
+		Select: notionapi.Select{Options: toOptions(opts.notificationChannels)},
+	},
+	"Webhook URL": &notionapi.URLPropertyConfig{
+		Type: notionapi.PropertyConfigTypeURL,
+	},
+	"チャネルアクセストークン": &notionapi.RichTextPropertyConfig{
+		Type: notionapi.PropertyConfigTypeRichText,
+	},
+	"LINE送信先ID": &notionapi.RichTextPropertyConfig{
+		Type: notionapi.PropertyConfigTypeRichText,
+	},
 	}
 }
 
@@ -235,14 +256,17 @@ func buildSampleConfigProperties(opts options, scheduleDBID string) notionapi.Pr
 			Type:   notionapi.PropertyTypeSelect,
 			Select: notionapi.Option{Name: opts.sampleNotification},
 		},
-		"Webhook URL": &notionapi.URLProperty{
-			Type: notionapi.PropertyTypeURL,
-			URL:  opts.sampleWebhookURL,
-		},
+	"Webhook URL": &notionapi.URLProperty{
+		Type: notionapi.PropertyTypeURL,
+		URL:  opts.sampleWebhookURL,
+	},
 	}
 
 	if opts.sampleChannelToken != "" {
 		props["チャネルアクセストークン"] = richTextProperty(opts.sampleChannelToken)
+	}
+	if opts.sampleLineRecipientID != "" {
+		props["LINE送信先ID"] = richTextProperty(opts.sampleLineRecipientID)
 	}
 
 	return props

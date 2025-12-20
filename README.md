@@ -16,7 +16,7 @@ Notionベースのスケジュールリマインダーサービス。Discord、L
 - **言語**: Go 1.21
 - **フレームワーク**: AWS SAM (Serverless Application Model)
 - **データソース**: Notion API
-- **通知チャネル**: Discord（LINE、Slackは近日対応予定）
+- **通知チャネル**: Discord、LINE（Slackは近日対応予定）
 
 ## 必要な準備
 
@@ -29,14 +29,15 @@ Notionベースのスケジュールリマインダーサービス。Discord、L
    - AWS CLIの設定
    - SAM CLIのインストール
 
-3. **通知用Webhook**
-   - Discord Webhook URL（Discord通知を使用する場合）
+3. **通知用設定**
+   - Discord/Slack Webhook URL
+   - LINE Messaging APIのチャネルアクセストークンと送信先ID
 
 ## 主な機能
 
 - ✅ **柔軟なリマインドタイミング**: スケジュールごとに複数のリマインド時期を設定可能（1日前、4営業日前など）
 - ✅ **営業日計算**: 営業日ベースのリマインドは自動的に週末・祝日をスキップ
-- ✅ **複数の通知チャネル**: Discord対応（LINE、Slackは近日対応）
+- ✅ **複数の通知チャネル**: Discord、LINE対応（Slackは近日対応）
 - ✅ **カスタマイズ可能なメッセージテンプレート**: 変数を使って通知メッセージをカスタマイズ
 - ✅ **複数データベース対応**: 異なる設定で複数のNotionデータベースを監視
 - ✅ **タイムゾーン対応**: Asia/Tokyo固定
@@ -108,7 +109,8 @@ Notionベースのスケジュールリマインダーサービス。Discord、L
 | リマインドタイミング | Multi-select | ✓ | リマインド時期（例: "1日前", "4営業日前"） |
 | 通知チャネル | Select | ✓ | "Discord", "LINE", "Slack" のいずれか |
 | Webhook URL | URL | * | Discord/Slack用のWebhook URL |
-| チャネルアクセストークン | Text | * | LINE用のチャネルアクセストークン |
+| チャネルアクセストークン | Text | * | LINE Messaging APIのチャネルアクセストークン |
+| LINE送信先ID | Text | * | LINEの送信先ID（ユーザー/グループ/ルームID） |
 
 **リマインドタイミング** の選択肢：
 
@@ -407,6 +409,7 @@ go mod tidy
    | 通知チャネル | Select | `Discord`, `LINE`, `Slack` |
    | Webhook URL | URL | - |
    | チャネルアクセストークン | Text | - |
+   | LINE送信先ID | Text | - |
 
 4. このデータベースをIntegrationと共有：
    - "共有"ボタンをクリック
@@ -628,6 +631,7 @@ aws logs tail /aws/lambda/schedule-reminder-ScheduleReminderFunction-xxx --follo
 - 名前: "タスクリマインド（個人）"
 - Channel: LINE
 - Token: 個人用LINEトークン
+- LINE送信先ID: 個人のユーザーID
 
 ### 営業日の例
 
@@ -653,7 +657,7 @@ aws logs tail /aws/lambda/schedule-reminder-ScheduleReminderFunction-xxx --follo
 
 ### Phase 2（次期）
 
-- [ ] LINE通知対応
+- [x] LINE通知対応
 - [ ] Slack通知対応
 - [ ] 祝日API連携（自動祝日読み込み）
 - [ ] 通知履歴管理（重複防止）
