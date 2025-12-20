@@ -449,7 +449,22 @@ Webhook URL: "https://discord.com/api/webhooks/..."
 4. Webhook URLをコピー
 5. Notion親データベースの"Webhook URL"欄に貼り付け
 
-### Step 6: AWSへデプロイ
+### Step 6: LINE Messaging APIの準備
+
+1. <https://developers.line.biz/> でプロバイダー/チャネルを作成
+2. Messaging APIチャネルの「チャネルアクセストークン（長期）」を発行
+3. 送信先IDを取得
+   - ユーザー: LINE公式アカウントを友だち追加し、Webhook受信ログで `userId` を確認
+   - グループ/ルーム: BOTを参加させ、Webhookで `groupId` / `roomId` を確認
+4. 親DBの `チャネルアクセストークン` と `LINE送信先ID` に設定
+
+### Step 7: Slack Webhook URLの取得
+
+1. Slackで「アプリを作成」→ Incoming Webhooks を有効化
+2. ワークスペースに追加し、Webhook URLを取得
+3. 親DBの `Webhook URL` に設定
+
+### Step 8: AWSへデプロイ
 
 ```bash
 cd src
@@ -497,6 +512,7 @@ Lambda関数は以下の環境変数を使用します：
 |------|------|------|-----|
 | `NOTION_API_KEY` | ✓ | Notion Integration APIキー | `secret_xxxxx...` |
 | `REMINDER_CONFIG_DB_ID` | ✓ | 親データベースのID | `a1b2c3d4e5f6...` |
+| `HOLIDAY_API_URL` | - | 祝日APIのURL（営業日計算に反映） | `https://holidays-jp.github.io/api/v1/date.json` |
 
 これらはデプロイ時にCloudFormationパラメータから自動設定されます。
 

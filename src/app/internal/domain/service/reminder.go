@@ -2,7 +2,11 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
 	"schedule-reminder/internal/domain/calculator"
 	"schedule-reminder/internal/domain/model"
 	"schedule-reminder/internal/infrastructure/notifier"
@@ -71,7 +75,7 @@ func (s *ReminderService) processConfig(ctx context.Context, config *model.Remin
 	fmt.Printf("  Found %d schedules\n", len(schedules))
 
 	// Create business day calculator
-	holidays := loadHolidays() // TODO: Load from config or external source
+	holidays := loadHolidays(config.Timezone)
 	calc := calculator.NewBusinessDayCalculator(holidays, config.Timezone)
 
 	// Process each schedule
@@ -158,13 +162,53 @@ func (s *ReminderService) sendNotification(ctx context.Context, schedule *model.
 	return nil
 }
 
-// loadHolidays loads holiday data
-// TODO: Implement proper holiday loading (from API, config, etc.)
-func loadHolidays() []time.Time {
-	// For now, return empty list
-	// In production, load from:
-	// - Environment variable
-	// - External API (e.g., Japanese holidays API)
-	// - Configuration file
-	return []time.Time{}
+// loadHolidays loads holiday data from an external API.
+func loadHolidays(timezone *time.Location) []time.Time {
+	holidayAPIURL := strings.TrimSpace(os.Getenv("HOLIDAY_API_URL"))
+	if holidayAPIURL == "" {
+		return []time.Time{}
+	}
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	req, err := http.NewRequest("GET", holidayAPIURL, nil)
+	if err != nil {
+		fmt.Printf("Warning: failed to create holiday API request: %v\n", err)
+		return []time.Time{}
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Printf("Warning: failed to fetch holidays: %v\n", err)
+		return []time.Time{}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		fmt.Printf("Warning: holiday API returned status %d\n", resp.StatusCode)
+		return []time.Time{}
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Printf("Warning: failed to read holiday API response: %v\n", err)
+		return []time.Time{}
+	}
+
+	var payload map[string]string
+	if err := json.Unmarshal(body, &payload); err != nil {
+		fmt.Printf("Warning: failed to parse holiday API response: %v\n", err)
+		return []time.Time{}
+	}
+
+	holidays := make([]time.Time, 0, len(payload))
+	for dateStr := range payload {
+		date, err := time.ParseInLocation("2006-01-02", dateStr, timezone)
+		if err != nil {
+			fmt.Printf("Warning: failed to parse holiday date %s: %v\n", dateStr, err)
+			continue
+		}
+		holidays = append(holidays, date)
+	}
+
+	return holidays
 }

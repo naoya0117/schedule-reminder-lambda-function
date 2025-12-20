@@ -15,8 +15,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: app/
-      Handler: main
-      Runtime: go1.x
+      Handler: bootstrap
+      Runtime: provided.al2023
       Architectures:
         - x86_64
       Events:
@@ -35,6 +35,8 @@ Resources:
               - ssm:GetParameters
             Resource:
               - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/lambda-functions/schedule-reminder/*'
+    Metadata:
+      BuildMethod: go1.x
 
 Outputs:
   ScheduleReminderFunction:
