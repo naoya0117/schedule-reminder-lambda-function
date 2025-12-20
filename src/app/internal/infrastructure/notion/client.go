@@ -155,6 +155,15 @@ func getMultiSelectProperty(page notionapi.Page, names ...string) *notionapi.Mul
 	return nil
 }
 
+func getSelectProperty(page notionapi.Page, names ...string) *notionapi.SelectProperty {
+	for _, name := range names {
+		if prop, ok := page.Properties[name].(*notionapi.SelectProperty); ok {
+			return prop
+		}
+	}
+	return nil
+}
+
 func getURLProperty(page notionapi.Page, names ...string) *notionapi.URLProperty {
 	for _, name := range names {
 		if prop, ok := page.Properties[name].(*notionapi.URLProperty); ok {
