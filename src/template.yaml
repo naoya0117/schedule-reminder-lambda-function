@@ -15,7 +15,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: app/
-      Handler: main
+      Handler: .
       Runtime: go1.x
       Architectures:
         - x86_64
