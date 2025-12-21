@@ -21,11 +21,10 @@ Resources:
         - x86_64
       Events:
         DailySchedule:
-          Type: Schedule
+          Type: ScheduleV2
           Properties:
-            Schedule: cron(0 9 * * ? *)  # Run daily at 00:00 UTC (09:00 JST)
-            Description: Daily reminder check
-            Enabled: true
+            ScheduleExpression: cron(0 9 * * ? *)
+            ScheduleExpressionTimezone: Asia/Tokyo
       Policies:
         - Statement:
           - Sid: SSMParameterAccess
