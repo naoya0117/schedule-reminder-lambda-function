@@ -19,12 +19,12 @@ Resources:
       Runtime: provided.al2023
       Architectures:
         - x86_64
-      #Events:
-        #DailySchedule:
-          #Type: ScheduleV2
-          #Properties:
-          #  ScheduleExpression: cron(0 9 * * ? *)
-          #  ScheduleExpressionTimezone: Asia/Tokyo
+      Events:
+        DailySchedule:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: cron(0 9 * * ? *)
+            ScheduleExpressionTimezone: Asia/Tokyo
       Policies:
         - Statement:
           - Sid: SSMParameterAccess
