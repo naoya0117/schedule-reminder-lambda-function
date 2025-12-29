@@ -1,0 +1,11 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "sam build --config-env local"
+  bin = "/bin/true"
+  include_ext = ["go", "mod", "sum", "yaml", "yml", "toml"]
+  exclude_dir = [".aws-sam", "tmp", "vendor", "node_modules"]
+  delay = 1000
+  stop_on_error = true
+  log = "tmp/air-build.log"

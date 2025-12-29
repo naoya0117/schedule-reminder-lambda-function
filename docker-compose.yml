@@ -43,8 +43,6 @@ services:
   # awsシミュレータの実行環境
   dind:
     image: 'docker:28.2-dind'
-    ports:
-      - "${NODE_DEBUG_PORT:-9229}:9229"
     privileged: true
     environment:
       - 'DOCKER_HOST=unix:///var/local/run/docker/docker.sock'
