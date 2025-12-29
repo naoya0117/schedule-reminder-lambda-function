@@ -17,12 +17,21 @@ lint = true
 capabilities = "CAPABILITY_IAM"
 confirm_changeset = true
 resolve_s3 = true
+parameter_overrides = [
+  "Environment=local",
+  "AwsEndpointUrl=http://localstack:4566",
+  "ParamPathPrefix=/lambda-functions/schedule-reminder",
+]
 
 [local.package.parameters]
 resolve_s3 = true
 
 [local.local_start_lambda.parameters]
 warm_containers = "EAGER"
+
+[local.local_invoke.parameters]
+container_host = "dind"
+container_host_interface = "0.0.0.0"
 
 [prod]
 [prod.global.parameters]

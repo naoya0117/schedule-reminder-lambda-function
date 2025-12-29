@@ -5,6 +5,26 @@ Description: >
 
   Notion-based schedule reminder service that sends notifications via Discord/LINE/Slack
 
+Parameters:
+  Environment:
+    Type: String
+    Default: prod
+    AllowedValues:
+      - local
+      - prod
+    Description: Environment name
+  AwsEndpointUrl:
+    Type: String
+    Default: ""
+    Description: AWS Endpoint (local environment only)
+  ParamPathPrefix:
+    Type: String
+    Default: "/lambda-functions/schedule-reminder"
+    Description: Parameter store path prefix
+
+Conditions:
+  IsLocalDeployment: !Equals [!Ref Environment, local]
+
 Globals:
   Function:
     Timeout: 60
@@ -19,6 +39,10 @@ Resources:
       Runtime: provided.al2023
       Architectures:
         - x86_64
+      Environment:
+        Variables:
+          AWS_ENDPOINT_URL: !If [IsLocalDeployment, !Ref AwsEndpointUrl, !Ref "AWS::NoValue"]
+          SSM_PARAM_PREFIX: !If [IsLocalDeployment, !Ref ParamPathPrefix, !Ref "AWS::NoValue"]
       Events:
         DailySchedule:
           Type: ScheduleV2
