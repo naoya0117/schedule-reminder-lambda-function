@@ -11,12 +11,11 @@ RUN (getent passwd ${UID} && /usr/sbin/userdel -r $(getent passwd ${UID} | cut -
   (getent group ${GID} || /usr/sbin/groupadd -g ${GID} nonroot) && \
   /usr/sbin/useradd -u ${UID} -g ${GID} -m -s /bin/bash nonroot
 
-ENV GOPATH=/go
-ENV PATH=${GOPATH}/bin:$PATH
+USER nonroot
+
+ENV PATH=/home/nonroot/go/bin:$PATH
 RUN go install github.com/air-verse/air@v1.63
 
-# 非特権ユーザに切り替え
-USER nonroot
 WORKDIR /app
 
 CMD ["air", "-c", ".air.toml"]

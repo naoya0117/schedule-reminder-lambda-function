@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"schedule-reminder/internal/domain/model"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/jomei/notionapi"
@@ -23,9 +25,14 @@ func NewClient(apiKey string) *Client {
 
 // LoadReminderConfigs loads all reminder configurations from the master database
 func (c *Client) LoadReminderConfigs(ctx context.Context, masterDBID string) ([]*model.ReminderConfig, error) {
+	enabledProperty, err := c.resolveEnabledProperty(ctx, masterDBID)
+	if err != nil {
+		return nil, err
+	}
+
 	query := &notionapi.DatabaseQueryRequest{
 		Filter: &notionapi.PropertyFilter{
-			Property: "Enabled",
+			Property: enabledProperty,
 			Checkbox: &notionapi.CheckboxFilterCondition{
 				Equals: true,
 			},
@@ -36,7 +43,7 @@ func (c *Client) LoadReminderConfigs(ctx context.Context, masterDBID string) ([]
 	for {
 		result, err := c.client.Database.Query(ctx, notionapi.DatabaseID(masterDBID), query)
 		if err != nil {
-			return nil, fmt.Errorf("failed to query master database: %w", err)
+			return nil, fmt.Errorf("failed to query master database with enabled property %q: %w", enabledProperty, err)
 		}
 
 		for _, page := range result.Results {
@@ -62,6 +69,51 @@ func (c *Client) LoadReminderConfigs(ctx context.Context, masterDBID string) ([]
 	}
 
 	return configs, nil
+}
+
+func (c *Client) resolveEnabledProperty(ctx context.Context, masterDBID string) (string, error) {
+	db, err := c.client.Database.Get(ctx, notionapi.DatabaseID(masterDBID))
+	if err != nil {
+		return "", fmt.Errorf("failed to fetch master database schema: %w", err)
+	}
+
+	candidates := []string{"有効"}
+	for _, name := range candidates {
+		if prop, ok := db.Properties[name]; ok {
+			if prop.GetType() != notionapi.PropertyConfigTypeCheckbox {
+				return "", fmt.Errorf("property %q must be checkbox, got type=%s id=%s", name, prop.GetType(), prop.GetID())
+			}
+			return name, nil
+		}
+	}
+
+	return "", fmt.Errorf(
+		"master database missing enabled property. expected one of %v; available properties: %s",
+		candidates,
+		describePropertyConfigs(db.Properties),
+	)
+}
+
+func describePropertyConfigs(props notionapi.PropertyConfigs) string {
+	if len(props) == 0 {
+		return "(none)"
+	}
+
+	names := make([]string, 0, len(props))
+	for name := range props {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	var builder strings.Builder
+	for i, name := range names {
+		if i > 0 {
+			builder.WriteString(", ")
+		}
+		prop := props[name]
+		builder.WriteString(fmt.Sprintf("%s(type=%s,id=%s)", name, prop.GetType(), prop.GetID()))
+	}
+	return builder.String()
 }
 
 // parseReminderConfig extracts configuration from a Notion page

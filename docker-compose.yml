@@ -40,6 +40,7 @@ services:
         - "GID=${GID:-1000}"
     volumes:
       - './src:/app'
+      - 'go-path:/home/nonroot/go'
   # awsシミュレータの実行環境
   dind:
     image: 'docker:28.2-dind'
@@ -74,4 +75,6 @@ volumes:
   dind-data:
     driver: 'local'
   docker-socket-dir:
+    driver: 'local'
+  go-path:
     driver: 'local'
