@@ -91,13 +91,13 @@ GitHubリポジトリの Settings → Secrets and variables → Actions で以�
 
 | Secret名 | 説明 | 例 |
 |----------|------|-----|
-| `AWS_ACCOUNT_ID` | AWSアカウントID | `123456789012` |
+| `AWS_OIDC_ROLE_ARN` | GitHub Actions 用IAMロールARN | `arn:aws:iam::123456789012:role/ScheduleReminderGitHubDeployRole` |
 | `PARAM_NOTION_API_KEY` | Notion Integration APIキー | `secret_xxxxx...` |
 | `PARAM_REMINDER_CONFIG_DB_ID` | リマインダー設定マスターDBのID | `a1b2c3d4e5f6...` |
 
 ### 4. SAM設定ファイルの作成
 
-`src/samconfig.toml` を作成：
+`src/samconfig.toml` の `[prod]` 設定を確認（既に同梱されています）：
 
 ```toml
 version = 0.1
@@ -105,20 +105,21 @@ version = 0.1
 [prod]
 [prod.deploy]
 [prod.deploy.parameters]
-stack_name = "schedule-reminder"
-s3_prefix = "schedule-reminder"
-region = "ap-northeast-1"
+stack_name = "schedule-reminder-deploy-stack"
 confirm_changeset = false
 capabilities = "CAPABILITY_IAM"
-disable_rollback = false
-image_repositories = []
 resolve_s3 = true
-
-[prod.build]
-[prod.build.parameters]
 ```
 
-### 5. ワークフローの動作確認
+### 5. ワークフロー環境変数の確認
+
+`.github/workflows/deploy.yml` には以下の環境変数が設定されています。必要に応じて変更してください：
+
+- `AWS_REGION`（デフォルト: `us-east-1`）
+- `PARAM_PATH_PREFIX`（デフォルト: `/lambda-functions/schedule-reminder`）
+- `SAM_CONFIG_ENV`（`src/samconfig.toml` の `[prod]` を参照）
+
+### 6. ワークフローの動作確認
 
 1. `main` または `master` ブランチにプッシュするか、GitHub UI から手動でワークフローを実行
 2. Actions タブで実行状況を確認
@@ -137,7 +138,6 @@ resolve_s3 = true
 7. **Parameter Storeへの値の登録**
    - `/lambda-functions/schedule-reminder/param-notion-api-key`
    - `/lambda-functions/schedule-reminder/param-reminder-config-db-id`
-8. **デプロイ情報の出力**
 
 ## トラブルシューティング
 
@@ -163,10 +163,10 @@ aws iam attach-role-policy \
 
 ### "samconfig.toml not found"
 
-**原因：** SAM設定ファイルが存在しない
+**原因：** `src/samconfig.toml` が存在しない、または `SAM_CONFIG_ENV` に対応するセクションがない
 
 **解決方法：**
-`src/samconfig.toml` を上記のテンプレートを使って作成してください。
+`src/samconfig.toml` を作成するか、`[prod]` セクションがあることを確認してください。
 
 ## ローカル開発との併用
 
@@ -174,11 +174,11 @@ GitHub Actions を使用している場合でも、ローカル開発は可能�
 
 ```bash
 # .envファイルを作成
-cp src/.env.example src/.env
+cp src/.env.example .env
 
 # 環境変数を設定
-# PARAM_NOTION_API_KEY=secret_xxxxx
-# PARAM_REMINDER_CONFIG_DB_ID=xxxxx
+# NOTION_API_KEY=secret_xxxxx
+# REMINDER_CONFIG_DB_ID=xxxxx
 
 # Docker Composeで起動
 docker-compose up -d

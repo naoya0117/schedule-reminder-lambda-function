@@ -91,7 +91,7 @@ Notionベースのスケジュールリマインダーサービス。Discord、L
    - 必須: `タイトル`, `期限日`
 3. 必要に応じて子DB側で上書きする
    - `リマインドタイミング`: レコード単位で通知タイミングを変更
-   - `メッセージテンプレート`: レコード単位で通知文を変更
+   - `リマインドメッセージ`: レコード単位で通知文を変更（テンプレート変数は置換されず、そのまま送信）
    - `説明`: `{description}` に差し込まれる補足情報
 4. Lambdaは毎日定時に実行され、当日送るべき通知のみを送信する
 
@@ -109,17 +109,18 @@ Notionベースのスケジュールリマインダーサービス。Discord、L
 | 有効 | Checkbox | ✓ | このリマインダーを有効にするか |
 | 対象データベースID | Text | ✓ | 監視対象の子データベースのID |
 | リマインドタイミング | Multi-select | ✓ | リマインド時期（例: "1日前", "4営業日前"） |
-| 通知チャネル | Select | ✓ | "Discord", "LINE", "Slack" のいずれか |
+| 通知チャネル | Select | ✓ | "Discord", "LINE", "Slack" のいずれか（大文字小文字は区別されません） |
 | Webhook URL | URL | * | Discord/Slack用のWebhook URL |
 | チャネルアクセストークン | Text | * | LINE Messaging APIのチャネルアクセストークン |
 | LINE送信先ID | Text | * | LINEの送信先ID（ユーザー/グループ/ルームID） |
+| メッセージテンプレート | Text | * | 通知メッセージのテンプレート（省略時はデフォルト） |
 
-**リマインドタイミング** の選択肢：
+**リマインドタイミング** の形式：
 
 - `当日`
-- `1日前`, `2日前`, `3日前`, `7日前`
-- `1営業日前`, `2営業日前`, `3営業日前`, `4営業日前`, `5営業日前`
-- `1週間前`, `2週間前`
+- `N日前`（例: `1日前`, `7日前`）
+- `N営業日前`（例: `2営業日前`, `4営業日前`）
+- `N週間前`（例: `1週間前`, `2週間前`）
 
 #### 子データベース: スケジュール・タスク管理DB
 
@@ -129,7 +130,7 @@ Notionベースのスケジュールリマインダーサービス。Discord、L
 - **期限日**プロパティ（固定）
 - **説明**プロパティ（任意、通知テンプレートの `{description}` に入る）
 - **リマインドタイミング**プロパティ（任意、各レコードでリマインド時期を上書き）
-- **メッセージテンプレート**プロパティ（任意、各レコードでメッセージを上書き）
+- **リマインドメッセージ**プロパティ（任意、各レコードでメッセージを上書き。数式プロパティも可）
 
 #### 「説明」プロパティの使い方
 
@@ -140,7 +141,7 @@ Notionベースのスケジュールリマインダーサービス。Discord、L
 
 ```
 説明: "定例ミーティングです。議題は前日までに追加してください。"
-メッセージテンプレート: "【リマインド】{title}\n{description}\n{url}"
+リマインドメッセージ: "【リマインド】定例ミーティングです。詳細はNotionを確認してください。"
 ```
 
 #### CLIで自動作成する場合
@@ -233,11 +234,11 @@ sam deploy --guided
 
 ```bash
 # .envファイルを作成（.env.exampleをコピー）
-cp src/.env.example src/.env
+cp src/.env.example .env
 
 # .envファイルを編集してNotionの情報を設定
-# PARAM_NOTION_API_KEY=secret_xxxxx
-# PARAM_REMINDER_CONFIG_DB_ID=xxxxx
+# NOTION_API_KEY=secret_xxxxx
+# REMINDER_CONFIG_DB_ID=xxxxx
 
 # Docker Composeで起動
 docker-compose up -d
@@ -245,6 +246,9 @@ docker-compose up -d
 # LocalStackにParameter Storeの値が自動登録されます
 # PARAM_プレフィックスの環境変数は以下のように変換されます：
 # PARAM_NOTION_API_KEY → /lambda-functions/schedule-reminder/param-notion-api-key
+
+# LocalStack + SAMで実行する場合
+./src/scripts/sam-local-invoke.sh
 ```
 
 #### SAM CLIでローカル実行（Parameter Store不要）
@@ -253,6 +257,9 @@ docker-compose up -d
 # 環境変数を設定（フォールバック用）
 export NOTION_API_KEY="secret_your_notion_api_key"
 export REMINDER_CONFIG_DB_ID="your_parent_database_id"
+
+# テンプレートのあるディレクトリへ移動
+cd src
 
 # ビルド
 sam build
@@ -283,7 +290,7 @@ Webhook URL: "https://discord.com/api/webhooks/..."
 期限日: 2025-12-01 10:00
 Participants: [@チーム全員]
 リマインドタイミング: ["当日"]
-メッセージテンプレート: "【本日のミーティング】{title}\n時間: {due_date}\n{url}"
+リマインドメッセージ: "【本日のミーティング】10:00から開始です"
 ```
 
 ### 例2: タスク期限リマインド
@@ -311,7 +318,7 @@ Assignee: @山田
 
 ## メッセージテンプレート変数
 
-テンプレートで使用可能な変数：
+親DBの「メッセージテンプレート」で使用可能な変数：
 
 | 変数 | 説明 | 例 |
 |------|------|-----|
@@ -320,6 +327,9 @@ Assignee: @山田
 | `{days_text}` | あと何日か | "明日" / "3日後" |
 | `{url}` | NotionページのURL | "<https://notion.so/>..." |
 | `{description}` | 説明（スケジュールDBの「説明」） | "四半期目標の確認" |
+| `{<property>}` | 任意のプロパティ（名前を小文字化して参照） | `{priority}` / `{status}` |
+
+子DBの「リマインドメッセージ」はテンプレートとして展開されず、そのまま送信されます（動的な文面にしたい場合はNotionの数式プロパティで文字列を生成してください）。
 
 デフォルトテンプレート（指定なしの場合）：
 
@@ -407,11 +417,12 @@ go mod tidy
    | 名前 | Title | - |
    | 有効 | Checkbox | - |
    | 対象データベースID | Text | - |
-   | リマインドタイミング | Multi-select | `当日`, `1日前`, `2日前`, `1営業日前`等 |
+   | リマインドタイミング | Multi-select | `当日`, `N日前`, `N営業日前`, `N週間前` |
    | 通知チャネル | Select | `Discord`, `LINE`, `Slack` |
    | Webhook URL | URL | - |
    | チャネルアクセストークン | Text | - |
    | LINE送信先ID | Text | - |
+   | メッセージテンプレート | Text | - |
 
 4. このデータベースをIntegrationと共有：
    - "共有"ボタンをクリック
@@ -425,7 +436,7 @@ go mod tidy
    - タイトルプロパティ
    - 期限日用の日付プロパティ
    - リマインドタイミングプロパティ（任意）
-   - メッセージテンプレートプロパティ（任意）
+   - リマインドメッセージプロパティ（任意、数式プロパティも可）
 3. 各データベースをIntegrationと共有（Step 2.4と同じ手順）
 
 ### Step 4: 親データベースでリマインダーを設定
@@ -441,7 +452,7 @@ go mod tidy
 Webhook URL: "https://discord.com/api/webhooks/..."
 ```
 
-メッセージテンプレートとリマインド時期は、子データベースの各レコードで上書きできます。
+リマインドメッセージとリマインド時期は、子データベースの各レコードで上書きできます。
 
 ### Step 5: Discord Webhook URLの取得
 
@@ -508,15 +519,16 @@ sam deploy
 
 ## 環境変数
 
-Lambda関数は以下の環境変数を使用します：
+Lambda関数は以下の環境変数を使用します（Parameter Storeで取得できない場合のフォールバックとして参照します）：
 
 | 変数 | 必須 | 説明 | 例 |
 |------|------|------|-----|
 | `NOTION_API_KEY` | ✓ | Notion Integration APIキー | `secret_xxxxx...` |
 | `REMINDER_CONFIG_DB_ID` | ✓ | 親データベースのID | `a1b2c3d4e5f6...` |
 | `HOLIDAY_API_URL` | - | 祝日APIのURL（営業日計算に反映） | `https://holidays-jp.github.io/api/v1/date.json` |
+| `SSM_PARAM_PREFIX` | - | Parameter Storeのパスプレフィックス（主にLocalStack用） | `/lambda-functions/schedule-reminder` |
 
-これらはデプロイ時にCloudFormationパラメータから自動設定されます。
+Parameter Storeのパスは `/lambda-functions/schedule-reminder/param-<name>` 形式で、`NOTION_API_KEY` は `param-notion-api-key` に変換されます。
 
 ## トラブルシューティング
 
@@ -628,11 +640,13 @@ aws logs tail /aws/lambda/schedule-reminder-ScheduleReminderFunction-xxx --follo
 
 ### カスタムメッセージテンプレート
 
-子データベースの各レコードの"メッセージテンプレート"に設定し、任意のプロパティをテンプレートで使用：
+親データベースの「メッセージテンプレート」に設定し、任意のプロパティをテンプレートで使用：
 
 ```
 メッセージテンプレート: "📅 {title}\n期限: {due_date}\n優先度: {priority}\n担当: {assignee}\n\n{description}\n\n詳細: {url}"
 ```
+
+子データベース側で個別に上書きしたい場合は「リマインドメッセージ」を使います（この値はテンプレート展開されません）。動的にしたい場合は、Notionの数式プロパティで文字列を組み立ててください。
 
 ### 複数の通知チャネル
 
@@ -677,7 +691,7 @@ aws logs tail /aws/lambda/schedule-reminder-ScheduleReminderFunction-xxx --follo
 
 - [x] LINE通知対応
 - [x] Slack通知対応
-- [ ] 祝日API連携（自動祝日読み込み）
+- [x] 祝日API連携（`HOLIDAY_API_URL` から自動祝日読み込み）
 - [ ] 通知履歴管理（重複防止）
 - [ ] 失敗時のリトライロジック
 
