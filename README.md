@@ -1,5 +1,7 @@
 # スケジュールリマインダー
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/naoya0117/schedule-reminder-lambda-function)
+
 Notionベースのスケジュールリマインダーサービス。Discord、LINE、Slackへの通知に対応。
 
 ## 概要
