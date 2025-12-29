@@ -87,8 +87,12 @@ func (c *Client) parseSchedule(page notionapi.Page, config *model.ReminderConfig
 	if descProp := getScheduleRichTextProperty(page, "説明", "Description"); descProp != nil && len(descProp.RichText) > 0 {
 		schedule.Description = descProp.RichText[0].PlainText
 	}
-	// Extract message template (optional)
-	if textProp := getScheduleRichTextProperty(page, "メッセージテンプレート", "Message Template"); textProp != nil && len(textProp.RichText) > 0 {
+	// Extract reminder message (optional)
+	if formulaProp := getScheduleFormulaProperty(page, "リマインドメッセージ"); formulaProp != nil {
+		if value := formatFormulaValue(formulaProp.Formula); value != "" {
+			schedule.MessageTemplate = value
+		}
+	} else if textProp := getScheduleRichTextProperty(page, "リマインドメッセージ"); textProp != nil && len(textProp.RichText) > 0 {
 		schedule.MessageTemplate = textProp.RichText[0].PlainText
 	}
 	// Extract reminder timings (optional)
@@ -122,6 +126,31 @@ func getScheduleMultiSelectProperty(page notionapi.Page, names ...string) *notio
 		}
 	}
 	return nil
+}
+
+func getScheduleFormulaProperty(page notionapi.Page, names ...string) *notionapi.FormulaProperty {
+	for _, name := range names {
+		if prop, ok := page.Properties[name].(*notionapi.FormulaProperty); ok {
+			return prop
+		}
+	}
+	return nil
+}
+
+func formatFormulaValue(formula notionapi.Formula) string {
+	switch formula.Type {
+	case notionapi.FormulaTypeString:
+		return formula.String
+	case notionapi.FormulaTypeNumber:
+		return fmt.Sprintf("%v", formula.Number)
+	case notionapi.FormulaTypeBoolean:
+		return fmt.Sprintf("%v", formula.Boolean)
+	case notionapi.FormulaTypeDate:
+		if formula.Date != nil && formula.Date.Start != nil {
+			return time.Time(*formula.Date.Start).Format("2006-01-02")
+		}
+	}
+	return ""
 }
 
 // extractPropertyValue extracts the value from a Notion property

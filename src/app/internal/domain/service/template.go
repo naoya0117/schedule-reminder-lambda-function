@@ -11,7 +11,8 @@ import (
 func BuildMessage(schedule *model.Schedule, config *model.ReminderConfig, timing string) string {
 	template := config.MessageTemplate
 	if schedule.MessageTemplate != "" {
-		template = schedule.MessageTemplate
+		// Use schedule-specific template as-is when provided.
+		return schedule.MessageTemplate
 	}
 	if template == "" {
 		// Default template
